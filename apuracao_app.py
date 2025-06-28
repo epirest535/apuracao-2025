@@ -26,14 +26,13 @@ if quesito_atual and jurado_atual:
     st.header(f"Quesito: {quesito_atual}")
     st.subheader(f"Jurado: {jurado_atual}")
 
-    # Inputs de notas para todos os participantes (ordem alfabética já aplicada)
+    # Inputs de notas para todos os participantes (em lista única, ordem alfabética)
     notas_atuais = {}
-    cols = st.columns(2)
-    for i, participante in enumerate(participantes):
-        with cols[i % 2]:
-            nota = st.number_input(f"{participante}", min_value=0.0, max_value=10.0, step=0.1,
-                                   key=f"{quesito_atual}_{jurado_atual}_{participante}")
-            notas_atuais[participante] = nota
+    for participante in participantes:
+        nota = st.number_input(f"{participante}", min_value=0.0, max_value=10.0, step=0.1,
+                               key=f"{quesito_atual}_{jurado_atual}_{participante}",
+                               format="%.1f")
+        notas_atuais[participante] = nota
 
     col1, col2 = st.columns(2)
 
@@ -68,9 +67,13 @@ if quesito_atual and jurado_atual:
 st.header("📊 Notas já lançadas")
 for q in quesitos:
     st.subheader(q)
-    df = pd.DataFrame.from_dict(
-        {p: st.session_state.notas[q][p] for p in participantes},
-        orient='index',
+    df_dict = {}
+    for p in participantes:
+        notas_formatadas = []
+        for n in st.session_state.notas[q][p]:
+            notas_formatadas.append(f"{n:.1f}".rstrip('0').rstrip('.') if '.' in f"{n:.1f}" else f"{n:.1f}")
+        df_dict[p] = notas_formatadas
+    df = pd.DataFrame.from_dict(df_dict, orient='index',
         columns=jurados[:len(next(iter(st.session_state.notas[q].values())))]
         if st.session_state.notas[q][participantes[0]] else []
     )
@@ -90,10 +93,4 @@ if st.session_state.quesito_idx >= len(quesitos):
                 soma = sum(notas_p_q) - menor
                 total += soma
                 descarte_total += menor
-        totais.append({"Participante": p, "Total": total, "Descartes": descarte_total})
-
-    df_totais = pd.DataFrame(totais)
-    df_totais = df_totais.sort_values(by=["Total", "Descartes"], ascending=[False, False]).reset_index(drop=True)
-    df_totais.index += 1
-    st.table(df_totais)
-    st.success(f"🏆 Campeão: {df_totais.iloc[0]['Participante']}")
+        totais.append({"Participante": p, "Total": round(total,1), "D
