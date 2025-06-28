@@ -1,6 +1,27 @@
 import streamlit as st
 import pandas as pd
 
+# Tema escuro geral via CSS
+st.markdown("""
+    <style>
+    body {
+        background-color: #111;
+        color: white;
+    }
+    .stButton>button {
+        color: white;
+        background-color: #333;
+    }
+    .stNumberInput>div>div>input {
+        background-color: #222;
+        color: white;
+    }
+    table {
+        color: white !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.set_page_config(page_title="Apuração Carnaval", page_icon="🎭", layout="wide")
 
 # Configuração inicial
@@ -63,8 +84,8 @@ if quesito_atual and jurado_atual:
                 st.session_state.quesito_idx -= 1
                 st.session_state.jurado_idx = len(jurados) - 1
 
-# Exibição ao vivo das notas já inseridas
-st.header("📊 Notas já lançadas")
+# Exibição ao vivo das notas já inseridas + totais
+st.header("📊 Notas e Totais Atuais")
 for q in quesitos:
     st.subheader(q)
     df_dict = {}
@@ -79,25 +100,29 @@ for q in quesitos:
     )
     st.table(df)
 
+# Exibir somatórios parciais em tempo real
+st.subheader("🏆 Somatórios Parciais (com descarte da menor nota)")
+totais = []
+for p in participantes:
+    total = 0
+    descarte_total = 0
+    for q in quesitos:
+        notas_p_q = st.session_state.notas[q][p]
+        if len(notas_p_q) > 1:
+            menor = min(notas_p_q)
+            soma = sum(notas_p_q) - menor
+            total += soma
+            descarte_total += menor
+        elif len(notas_p_q) == 1:
+            total += notas_p_q[0]
+    totais.append({"Participante": p, "Total": round(total,1), "Descartes": round(descarte_total,1)})
+
+df_totais = pd.DataFrame(totais)
+df_totais = df_totais.sort_values(by=["Total", "Descartes"], ascending=[False, False]).reset_index(drop=True)
+df_totais.index += 1
+st.table(df_totais.style.format({"Total": "{:.1f}", "Descartes": "{:.1f}"}).format(na_rep=""))
+
 # Exibir classificação final se terminou tudo
 if st.session_state.quesito_idx >= len(quesitos):
     st.header("🏆 Classificação Final")
-    totais = []
-    for p in participantes:
-        total = 0
-        descarte_total = 0
-        for q in quesitos:
-            notas_p_q = st.session_state.notas[q][p]
-            if len(notas_p_q) == len(jurados):
-                menor = min(notas_p_q)
-                soma = sum(notas_p_q) - menor
-                total += soma
-                descarte_total += menor
-        totais.append({"Participante": p, "Total": round(total,1), "Descartes": round(descarte_total,1)})
-
-    df_totais = pd.DataFrame(totais)
-    df_totais = df_totais.sort_values(by=["Total", "Descartes"], ascending=[False, False]).reset_index(drop=True)
-    df_totais.index += 1
-    st.table(df_totais.style.format({"Total": "{:.1f}", "Descartes": "{:.1f}"}).format(na_rep=""))
-
     st.success(f"🏆 Campeão: {df_totais.iloc[0]['Participante']}")
