@@ -93,4 +93,11 @@ if st.session_state.quesito_idx >= len(quesitos):
                 soma = sum(notas_p_q) - menor
                 total += soma
                 descarte_total += menor
-        totais.append({"Participante": p, "Total": round(total,1), "D
+        totais.append({"Participante": p, "Total": round(total,1), "Descartes": round(descarte_total,1)})
+
+    df_totais = pd.DataFrame(totais)
+    df_totais = df_totais.sort_values(by=["Total", "Descartes"], ascending=[False, False]).reset_index(drop=True)
+    df_totais.index += 1
+    st.table(df_totais.style.format({"Total": "{:.1f}", "Descartes": "{:.1f}"}).format(na_rep=""))
+
+    st.success(f"🏆 Campeão: {df_totais.iloc[0]['Participante']}")
